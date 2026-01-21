@@ -1,0 +1,30 @@
+# nginx proxy address - http://172.17.0.1:80
+
+name: appwrite
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  app:
+    image: appwrite/appwrite:latest
+    container_name: appwrite-app
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+    ports:
+      - '172.17.0.1:80:80'
+    volumes:
+      - './rootfs/data/appwrite:/data'
+    networks:
+      - appwrite
+
+networks:
+  appwrite:
+    name: appwrite
+    external: false
