@@ -45,7 +45,7 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/appwrite` - Data storage
+- `./volumes/data/appwrite` - Data storage
 
 ## 🔍 Logging
 
