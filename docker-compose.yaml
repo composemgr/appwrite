@@ -20,7 +20,7 @@ services:
     ports:
       - '172.17.0.1:80:80'
     volumes:
-      - './rootfs/data/appwrite:/data'
+      - './volumes/data/appwrite:/data'
     networks:
       - appwrite
 
