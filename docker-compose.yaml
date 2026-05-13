@@ -17,6 +17,8 @@ services:
     logging: *default-logging
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: appwrite-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
       _APP_ENV: production
       _APP_OPENSSL_KEY_V1: ${ENCRYPTION_KEY:-changeme_encryption_key_min_32_chars}
       _APP_DOMAIN: ${BASE_HOST_NAME:-$HOSTNAME}
@@ -41,8 +43,26 @@ services:
     depends_on:
       - appwrite-db
       - appwrite-redis
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://appwrite-app:80'
+      - 'cloudflare.hostname=appwrite.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.appwrite-app.entrypoints=http'
+      - 'traefik.http.routers.appwrite-app-secure.tls=true'
+      - 'traefik.http.routers.appwrite-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.appwrite-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.appwrite-app.middlewares=appwrite-app-https-redirect'
+      - 'traefik.http.routers.appwrite-app-secure.entrypoints=https'
+      - 'traefik.http.routers.appwrite-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.appwrite-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.appwrite-app-secure.service=appwrite-app'
+      - 'traefik.http.services.appwrite-app.loadbalancer.server.port=80'
     networks:
       - appwrite
+      - proxy
+      - cloudflare
 
   appwrite-db:
     image: mariadb:latest
@@ -53,6 +73,7 @@ services:
     logging: *default-logging
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: appwrite-db
       MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-appwrite}
       MYSQL_USER: ${DB_USER_NAME:-appwrite}
       MYSQL_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
@@ -76,6 +97,7 @@ services:
     logging: *default-logging
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: appwrite-redis
     volumes:
       - './volumes/data/db/redis/appwrite:/data'
     healthcheck:
@@ -90,3 +112,7 @@ networks:
   appwrite:
     name: appwrite
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
