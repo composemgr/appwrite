@@ -21,6 +21,7 @@ services:
       HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
       _APP_ENV: production
       _APP_OPENSSL_KEY_V1: ${ENCRYPTION_KEY:-changeme_encryption_key_min_32_chars}
+      _APP_EXECUTOR_SECRET: ${SECURE_SECRET:-changeme_executor_secret_min_32_chars}
       _APP_DOMAIN: ${BASE_HOST_NAME:-$HOSTNAME}
       _APP_DOMAIN_TARGET: ${BASE_HOST_NAME:-$HOSTNAME}
       _APP_DB_HOST: appwrite-db
