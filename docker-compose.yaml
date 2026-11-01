@@ -1,4 +1,4 @@
-# nginx proxy address - http://172.17.0.1:80
+# nginx proxy address - http://172.17.0.1:64111
 
 name: appwrite
 x-logging: &default-logging
@@ -11,6 +11,7 @@ services:
   app:
     image: appwrite/appwrite:latest
     container_name: appwrite-app
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
     hostname: ${BASE_HOST_NAME:-$HOSTNAME}
     restart: always
     pull_policy: always
@@ -28,8 +29,8 @@ services:
       _APP_DB_PORT: 3306
       _APP_DB_SCHEMA: ${DB_CREATE_DATABASE_NAME:-appwrite}
       _APP_DB_USER: ${DB_USER_NAME:-appwrite}
-      _APP_DB_PASS: ${DB_USER_PASS:-changeme_db_password}
-      _APP_DB_ROOT_PASS: ${DB_ADMIN_PASS:-changeme_admin_password}
+      _APP_DB_PASS: ${DB_USER_PASS:-replace-with-a-random-password}
+      _APP_DB_ROOT_PASS: ${DB_ADMIN_PASS:-replace-with-a-random-password}
       _APP_REDIS_HOST: appwrite-redis
       _APP_REDIS_PORT: 6379
       _APP_SMTP_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
@@ -38,36 +39,21 @@ services:
       _APP_SMTP_USERNAME: ${EMAIL_SERVER_LOGIN_NAME:-}
       _APP_SMTP_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
     ports:
-      - '172.17.0.1:80:80'
+      - '172.17.0.1:64111:80'
     volumes:
       - './volumes/data/appwrite:/storage'
     depends_on:
-      - appwrite-db
-      - appwrite-redis
-    labels:
-      - 'traefik.enable=true'
-      - 'cloudflare.enable=true'
-      - 'traefik.docker.network=proxy'
-      - 'cloudflare.service=http://appwrite-app:80'
-      - 'cloudflare.hostname=appwrite.${CLOUDFLARE_ZONE_NAME:-}'
-      - 'traefik.http.routers.appwrite-app.entrypoints=http'
-      - 'traefik.http.routers.appwrite-app-secure.tls=true'
-      - 'traefik.http.routers.appwrite-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.middlewares.appwrite-app-https-redirect.redirectscheme.scheme=https'
-      - 'traefik.http.routers.appwrite-app.middlewares=appwrite-app-https-redirect'
-      - 'traefik.http.routers.appwrite-app-secure.entrypoints=https'
-      - 'traefik.http.routers.appwrite-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.routers.appwrite-app-secure.tls.certresolver=cloudflare'
-      - 'traefik.http.routers.appwrite-app-secure.service=appwrite-app'
-      - 'traefik.http.services.appwrite-app.loadbalancer.server.port=80'
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - appwrite
-      - proxy
-      - cloudflare
 
-  appwrite-db:
+  db:
     image: mariadb:latest
     container_name: appwrite-db
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
     hostname: appwrite-db
     restart: always
     pull_policy: always
@@ -77,21 +63,22 @@ services:
       CONTAINER_NAME: appwrite-db
       MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-appwrite}
       MYSQL_USER: ${DB_USER_NAME:-appwrite}
-      MYSQL_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      MYSQL_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
+      MYSQL_PASSWORD: ${DB_USER_PASS:-replace-with-a-random-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ADMIN_PASS:-replace-with-a-random-password}
     volumes:
-      - './volumes/data/db/mariadb/appwrite:/var/lib/mysql'
+      - './volumes/db/mariadb/appwrite:/var/lib/mysql:z'
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - appwrite
 
-  appwrite-redis:
+  redis:
     image: redis:alpine
     container_name: appwrite-redis
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
     hostname: appwrite-redis
     restart: always
     pull_policy: always
@@ -100,7 +87,7 @@ services:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: appwrite-redis
     volumes:
-      - './volumes/data/db/redis/appwrite:/data'
+      - './volumes/cache/redis/appwrite:/data'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -113,7 +100,3 @@ networks:
   appwrite:
     name: appwrite
     external: false
-  proxy:
-    external: true
-  cloudflare:
-    external: true
