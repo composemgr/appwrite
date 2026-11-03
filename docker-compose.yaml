@@ -38,6 +38,12 @@ services:
       _APP_SMTP_SECURE: tls
       _APP_SMTP_USERNAME: ${EMAIL_SERVER_LOGIN_NAME:-}
       _APP_SMTP_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
+    healthcheck:
+      test: ['CMD', 'curl', '-s', '-o', '/dev/null', '--max-time', '5', 'http://127.0.0.1:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '172.17.0.1:64111:80'
     volumes:
